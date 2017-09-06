@@ -122,6 +122,9 @@ public class RtmpCameraView extends SurfaceView implements SurfaceHolder.Callbac
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
     }
+    public void setCamera(Camera camera){
+        this.mCamera = camera;
+    }
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
         if (AudioRecordRunnable.audioRecord == null || AudioRecordRunnable.audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {

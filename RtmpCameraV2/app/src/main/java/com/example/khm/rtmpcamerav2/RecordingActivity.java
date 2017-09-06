@@ -47,8 +47,12 @@ public class RecordingActivity extends Activity {
     private static String ffmpeg_link = "rtmp://rtmpmanager-freecat.afreeca.tv/app/gudals2001-548439256";
     private static String chatRoomName = "test";
 
+    private int currentCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private int screenWidth, screenHeight;
     private Button btnRecorderControl;
+    private Button chatViewBtn;
+    private Button configOpenBtn;
+    private Button cameraSwitchBtn;
 
     Socket sock;
     ChatListAdapter chatListAdapter;
@@ -127,7 +131,7 @@ public class RecordingActivity extends Activity {
         //카메라 뷰 추가
         layoutParam = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
         cameraDevice = Camera.open();
-        Camera.Parameters cameraParams = cameraDevice.getParameters();
+        final Camera.Parameters cameraParams = cameraDevice.getParameters();
         cameraParams.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
         cameraDevice.setParameters(cameraParams);
         Log.i(LOG_TAG, "cameara open");
@@ -141,9 +145,10 @@ public class RecordingActivity extends Activity {
         ListView chatListView = (ListView)findViewById(R.id.chatList);
         chatListAdapter = new ChatListAdapter();
         chatListView.setAdapter(chatListAdapter);
+        /*
         for(int i= 0 ; i < 10; i++){
             chatListAdapter.addItem("hello", "my name is ~");
-        }
+        }*/
 
         //채팅 접속
         //initChatting();
@@ -156,6 +161,9 @@ public class RecordingActivity extends Activity {
             @Override
             public void run() {
                 preViewLayout.setAlpha(0);
+                btnRecorderControl.setEnabled(false);
+                chatViewBtn.setEnabled(false);
+                configOpenBtn.setEnabled(false);
             }
         };
         preViewLayout.setOnTouchListener(new View.OnTouchListener() {
@@ -166,9 +174,17 @@ public class RecordingActivity extends Activity {
                         if(preViewLayout.getAlpha() == 1){
                             handler.removeCallbacks(disappearAction);
                             preViewLayout.setAlpha(0);
+                            btnRecorderControl.setEnabled(false);
+                            chatViewBtn.setEnabled(false);
+                            configOpenBtn.setEnabled(false);
+
                         }else{
                             preViewLayout.setAlpha(1);
+                            btnRecorderControl.setEnabled(true);
+                            chatViewBtn.setEnabled(true);
+                            configOpenBtn.setEnabled(true);
                             handler.postDelayed(disappearAction,3000);
+
                         }
                         break;
                 }
@@ -198,8 +214,8 @@ public class RecordingActivity extends Activity {
         });
 
         //채팅 뷰 ON/OFF버튼 이벤트 등록
-        Button btn = (Button)findViewById(R.id.chatConnect_button);
-        btn.setOnClickListener(new View.OnClickListener() {
+        chatViewBtn = (Button)findViewById(R.id.chatConnect_button);
+        chatViewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(chatViewLayout.getVisibility() == View.VISIBLE){
@@ -210,9 +226,37 @@ public class RecordingActivity extends Activity {
             }
         });
 
+        //카메라 전환 버튼 이벤트 등록
+        cameraSwitchBtn = (Button)findViewById(R.id.cameraSwitch_button);
+        cameraSwitchBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //카메라 자원 반납
+                cameraDevice.stopPreview();
+                cameraDevice.setPreviewCallback(null);
+                cameraDevice.release();
+                cameraDevice = null;
+                if(currentCameraId == Camera.CameraInfo.CAMERA_FACING_BACK){
+                    currentCameraId = Camera.CameraInfo.CAMERA_FACING_FRONT;
+                }else{
+                    currentCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
+                }
+                //카메라 오픈
+                cameraDevice = Camera.open(currentCameraId);
+                //후면카메라인 경우 auto focus 기능 추가
+                if(currentCameraId == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                    Camera.Parameters cameraParams = cameraDevice.getParameters();
+                    cameraParams.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+                    cameraDevice.setParameters(cameraParams);
+                }
+                cameraView.setCamera(cameraDevice);
+                cameraView.surfaceChanged(cameraView.getHolder(),-1,imageWidth,imageHeight);
+            }
+        });
+
         //설정 이벤트 등록
         final LinearLayout innerLayout = (LinearLayout)findViewById(R.id.recordInner_layout);
-        Button configOpenBtn = (Button)findViewById(R.id.configOpen_Btn);
+        configOpenBtn = (Button)findViewById(R.id.configOpen_Btn);
         Button configConfirmBtn = (Button)findViewById(R.id.configConfirm_Btn);
         Button configCancelBtn = (Button)findViewById(R.id.configCancel_Btn);
         final EditText rtmpURLConfigEditText = (EditText)findViewById(R.id.rtmpURLConfig_EditText);
@@ -280,24 +324,38 @@ public class RecordingActivity extends Activity {
             imageWidth = 1280;
             imageHeight = 720;
         }
+
         cameraView.setResolution(imageWidth, imageHeight);
         cameraView.surfaceChanged(cameraView.getHolder(), -1, imageWidth, imageHeight);
     }
     //채팅 초기화
     private void initChatting() {
         try{
-            sock = IO.socket("http://192.168.0.5:3000");
-            sock.connect();
 
+            sock = IO.socket("http://192.168.0.5:3000");
+            sock.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
+            sock.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
             JSONObject json = new JSONObject();
             json.put("room", chatRoomName);
             sock.emit("joinroom", json);
             sock.on("toclient",toClient);
+            sock.connect();
         } catch (URISyntaxException | JSONException e) {
             Log.d("Socket","SOCKET EXCEPTION");
         }
     }
-
+    private Emitter.Listener onConnectError = new Emitter.Listener(){
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    chatListAdapter.addItem("CONNECT ERROR","채팅 연결에 실패했습니다.");
+                    chatListAdapter.notifyDataSetChanged();
+                }
+            });
+        }
+    };
     private Emitter.Listener toClient = new Emitter.Listener(){
         @Override
         public void call(final Object... args){
@@ -335,13 +393,13 @@ public class RecordingActivity extends Activity {
         recorder = new FFmpegFrameRecorder(ffmpeg_link, imageWidth, imageHeight, 1);
         recorder.setFormat("flv");
         recorder.setSampleRate(sampleAudioRateInHz);
-        recorder.setVideoBitrate(1500000);
+        recorder.setVideoBitrate(1000000);
         recorder.setVideoOption("preset", "ultrafast");
+        recorder.setGopSize(60); //key frame?? (Key frame interval, in our case every 2 seconds -> 30 (fps) * 2 = 60)
         // Set in the surface changed method
         recorder.setFrameRate(frameRate);
         recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
         recorder.setAudioCodec(avcodec.AV_CODEC_ID_AAC);
-
         Log.i(LOG_TAG, "recorder initialize success");
 
         audioRecordRunnable = new AudioRecordRunnable();

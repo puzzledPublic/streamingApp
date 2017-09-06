@@ -5,6 +5,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
     <Button
         android:id="@+id/recorder_button"
+        android:minHeight="30dp"
+        android:minWidth="50dp"
         android:text="Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -12,6 +14,8 @@
         />
     <Button
         android:id="@+id/configOpen_Btn"
+        android:minHeight="30dp"
+        android:minWidth="50dp"
         android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
         android:text="Config"
@@ -21,12 +25,23 @@
 
     <Button
         android:id="@+id/chatConnect_button"
+        android:minHeight="30dp"
+        android:minWidth="50dp"
         android:text="Chat"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentRight="true"
         android:background="@drawable/btn_background"/>
-
+    <Button
+        android:id="@+id/cameraSwitch_button"
+        android:minHeight="30dp"
+        android:minWidth="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="switch"
+        android:layout_alignParentRight="true"
+        android:layout_below="@id/chatConnect_button"
+        android:background="@drawable/btn_background"/>
     <LinearLayout
         android:id="@+id/recordInner_layout"
         android:layout_width="match_parent"
