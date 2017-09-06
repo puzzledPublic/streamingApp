@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="streaming_platform">
+        <item>트위치</item>
+        <item>아프리카</item>
+        <item>유튜브</item>
+        <item>직접입력</item>
+    </string-array>
+
+</resources>

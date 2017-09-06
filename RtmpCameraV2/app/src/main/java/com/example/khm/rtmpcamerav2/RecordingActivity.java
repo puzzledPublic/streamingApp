@@ -44,7 +44,7 @@ public class RecordingActivity extends Activity {
     private final static String CLASS_LABEL = "RecordingActivity";
     private final static String LOG_TAG = CLASS_LABEL;
     //방송 RTMP URL, 채팅 방 이름
-    private static String ffmpeg_link = "rtmp://rtmpmanager-freecat.afreeca.tv/app/gudals2001-548439256";
+    private static String ffmpeg_link = "";
     private static String chatRoomName = "test";
 
     private int currentCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
@@ -201,10 +201,15 @@ public class RecordingActivity extends Activity {
             @Override
             public void onClick(View v) {
                 if (!recording) {
-                    startRecording();
-                    Log.w(LOG_TAG, "Start Button Pushed");
-                    btnRecorderControl.setText("Stop");
-                } else {
+                    if (ffmpeg_link.isEmpty()) {
+                        Toast.makeText(RecordingActivity.this, "주소 설정이 필요합니다.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        startRecording();
+                        Log.w(LOG_TAG, "Start Button Pushed");
+                        btnRecorderControl.setText("Stop");
+                    }
+                }
+                else {
                     // This will trigger the audio recording loop to stop and then set isRecorderStart = false;
                     stopRecording();
                     Log.w(LOG_TAG, "Stop Button Pushed");
@@ -259,16 +264,20 @@ public class RecordingActivity extends Activity {
         configOpenBtn = (Button)findViewById(R.id.configOpen_Btn);
         Button configConfirmBtn = (Button)findViewById(R.id.configConfirm_Btn);
         Button configCancelBtn = (Button)findViewById(R.id.configCancel_Btn);
+        Button platformChoiceBtn = (Button)findViewById(R.id.platformChoice_Btn);
         final EditText rtmpURLConfigEditText = (EditText)findViewById(R.id.rtmpURLConfig_EditText);
         final EditText chatConfigEditText = (EditText)findViewById(R.id.chatConfig_EditText);
+        final EditText streamKeyConfigEditText = (EditText)findViewById(R.id.streamKeyConfig_EditText);
         final RadioGroup resolutionRadioGroup = (RadioGroup)findViewById(R.id.resolution_radioGroup);
         ((RadioButton)resolutionRadioGroup.getChildAt(0)).setChecked(true);
 
         //기존의 설정 값 가져오기, 없다면 Default
         SharedPreferences configs = getSharedPreferences("configs",MODE_PRIVATE);
-        String tempUrl = configs.getString("RTMPURL","rtmp://rtmpmanager-freecat.afreeca.tv/app/gudals2001-548439256");
+        String tempUrl = configs.getString("RTMPURL","rtmp://rtmpmanager-freecat.afreeca.tv/app/");
+        String tempKey = configs.getString("STREAMKEY","gudals2001-548439256");
         String tempChatRoomName = configs.getString("CHATROOMNAME","test");
         rtmpURLConfigEditText.setText(tempUrl);
+        streamKeyConfigEditText.setText(tempKey);
         chatConfigEditText.setText(tempChatRoomName);
 
         configOpenBtn.setOnClickListener(new View.OnClickListener() {
@@ -290,10 +299,16 @@ public class RecordingActivity extends Activity {
             public void onClick(View v) {
                 SharedPreferences configs = getSharedPreferences("configs",MODE_PRIVATE);
                 SharedPreferences.Editor configEditor = configs.edit();
-                //방송 주소, 채팅 룸 이름 설정 및 저장
-                ffmpeg_link = rtmpURLConfigEditText.getText().toString();
+                //방송 주소, 스트림 키, 채팅 룸 이름 설정 및 저장
+                String rtmpBaseURL = rtmpURLConfigEditText.getText().toString();
+                String streamKey = streamKeyConfigEditText.getText().toString();
+                if(!rtmpBaseURL.endsWith("/")){
+                    rtmpBaseURL += "/";
+                }
+                ffmpeg_link = rtmpBaseURL + streamKey;
                 chatRoomName = chatConfigEditText.getText().toString();
-                configEditor.putString("RTMPURL",ffmpeg_link);
+                configEditor.putString("RTMPURL",rtmpBaseURL);
+                configEditor.putString("STREAMKEY",streamKey);
                 configEditor.putString("CHATROOMNAME",chatRoomName);
                 configEditor.commit();
                 //방송 화질 설정
@@ -310,6 +325,16 @@ public class RecordingActivity extends Activity {
                 preViewLayout.setEnabled(true);
             }
         });
+
+        /* TODO:: 플랫폼별 주소 설정
+        platformChoiceBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PlatformSelectDialogFragment platformSelectDialogFragment = new PlatformSelectDialogFragment();
+                platformSelectDialogFragment.setRtmpURLConfigEditText(rtmpURLConfigEditText);
+                platformSelectDialogFragment.show(getFragmentManager(), "platforms");
+            }
+        });*/
 
     }
     //방송 화질 설정 함수
